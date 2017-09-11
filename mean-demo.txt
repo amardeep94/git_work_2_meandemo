@@ -1,0 +1,155 @@
+package.json
+
+{
+	"name": "maen-demo",
+	"version": "0.0.1",
+	"dependencies": {
+		"body-parser": "^1.17.2",
+		"express": "^4.15.4",
+		"mongoose": "^4.11.9"
+	}
+}
+
+
+
+server.js
+
+var express = require('express'),
+	app = express(),
+	bodyParser = require('body-parser'),
+	mongoose = require('mongoose'),
+	meetupsController = require('./server/controllers/meetups-controller')
+
+mongoose.connect('mongodb://localhost:27017/mean-demo');
+
+app.use(bodyParser());
+app.get('/', function(req,res){
+	res.sendfile(__dirname + '/client/views/index.html');
+});
+
+
+/*app.get('/js', function(req,res){
+	res.sendfile(__dirname + '/client/js/controllers/meetups-controller');
+});
+*/
+app.use('/js', express.static(__dirname + '/client/js'));
+
+//REST API
+app.get('/api/meetups', meetupsController.list);
+app.post('/api/meetups', meetupsController.create);
+
+app.listen(3000, function(){
+	console.log('I\'m Listening...');
+}) 
+
+
+
+\server\controllers\meetups-controller.js
+ 
+ var Meetup = require('../models/meetup');
+
+module.exports.create = function(req,res){ 
+	var meetup = new Meetup(req.body); //does json of request recieved  //text to object.
+	console.log(typeof(res));
+	console.log(req.body);
+	meetup.save(function(err,result){   //save body recieved from client to DB 
+		console.log("res",res);
+		console.log("result",typeof(res.result));
+		res.json(result);
+		console.log(typeof(res));
+		
+	});
+}
+
+module.exports.list = function (req,res) {
+	Meetup.find({},function(err, results){
+		res.json(results);
+	}); 
+}
+
+
+
+
+server\model\meetup.js
+
+var mongoose = require('mongoose');
+
+module.exports = mongoose.model('Meetup',{
+	name: String
+});
+
+
+
+
+client\views\index.html
+
+<!DOCTYPE html>
+<html ng-app="meetupApp">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title></title>
+		<meta name="description" content="">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<div ng-controller="meetupsController">
+			<h1>There are {{meetups.length}} meetups</h1>
+			<ul>
+				<li ng-repeat="meetup in meetups">
+					{{meetup.name}}
+				</li>
+			</ul>
+			<form ng-submit="createMeetup()">
+				<input type="text" placeholder="Meetup name" ng-model="meetupName"></input>
+				<button type="submit">Add</button>
+			</form>
+		</div>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.16/angular.js"></script>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.16/angular-resource.js"></script>
+		<script type="text/javascript" src="/js/app.js"></script>
+		
+		<script type="text/javascript" src="/js/controllers/meetups-controller.js"></script>
+	</body>
+</html>
+
+
+
+
+client\js\controllers\meetups-controller.js
+
+
+app.controller('meetupsController',['$scope', '$resource', function($scope, $resource){
+	var Meetup = $resource('/api/meetups'); /*url pe get aur post present hai jo ki $resources se link kar diye,
+	now $resource database se linked hai because of ngResource, ngResource is used to link or use RESTful services in angular seamlessly*/
+	
+	Meetup.query(function (results) {
+		$scope.meetups = results;
+	});
+	
+	$scope.meetups = []
+		
+	$scope.createMeetup = function(){
+		var meetup = new Meetup();
+		meetup.name = $scope.meetupName;
+		meetup.age = 20;
+		meetup.$save(function(e) {
+			console.log(e);
+			$scope.meetups.push(e);
+			$scope.meetupName = '';
+		}
+		);
+		
+	}	
+}])
+
+
+
+
+client\js\app.js
+
+var app = angular.module('meetupApp',['ngResource'])
+
+
+
+
